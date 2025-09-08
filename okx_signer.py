@@ -3,6 +3,13 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
+@app.route('/ping', methods=['GET'])
+def ping():
+    return jsonify({
+        "status": "alive",
+        "message": "Flask is running and reachable"
+    })
+
 @app.route('/sign', methods=['POST'])
 def sign():
     data = request.get_json()
