@@ -80,6 +80,21 @@ def webhook():
         print("❌ General Error:", str(e))
         return jsonify({"error": str(e)}), 500
 
+@app.route('/test-okx', methods=['GET'])
+def test_okx():
+    try:
+        response = requests.get("https://api.okx.com/api/v5/public/instruments?instType=SPOT")
+        return jsonify({
+            "status": "success",
+            "code": response.status_code,
+            "data": response.json()
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
