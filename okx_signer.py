@@ -3,6 +3,7 @@ import time
 import hmac
 import base64
 import hashlib
+import json
 import requests
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
@@ -11,26 +12,31 @@ load_dotenv()
 
 app = Flask(__name__)
 
+def sign_okx_request(timestamp, method, endpoint, body):
+    secret = os.getenv("OKX_API_SECRET")
+    prehash = f"{timestamp}{method.upper()}{endpoint}{body}"
+    signature = base64.b64encode(
+        hmac.new(secret.encode(), prehash.encode(), hashlib.sha256).digest()
+    ).decode()
+    return signature
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     try:
         payload = request.get_json(force=True)
         print("📦 Incoming payload:", payload)
 
-        # Extract fields
         url = payload.get("url")
         method = payload.get("method", "POST")
         body = payload.get("body", {})
         meta = payload.get("meta", {})
 
-        # Prepare OKX signature
+        # Extract endpoint from full URL
+        endpoint = url.replace("https://www.okx.com", "").replace("https://api.okx.com", "")
+        body_str = json.dumps(body) if method.upper() != "GET" else ""
+
         timestamp = str(time.time())
-        body_str = "" if method == "GET" else json.dumps(body)
-        prehash = f"{timestamp}{method.upper()}{url.replace('https://api.okx.com', '')}{body_str}"
-        secret = os.getenv("OKX_API_SECRET")
-        signature = base64.b64encode(hmac.new(
-            secret.encode(), prehash.encode(), hashlib.sha256
-        ).digest()).decode()
+        signature = sign_okx_request(timestamp, method, endpoint, body_str)
 
         headers = {
             "OK-ACCESS-KEY": os.getenv("OKX_API_KEY"),
@@ -40,11 +46,9 @@ def webhook():
             "Content-Type": "application/json"
         }
 
-        # Send request to OKX
-        response = requests.post(url, headers=headers, json=body)
+        response = requests.request(method, url, headers=headers, json=body)
         print("📨 OKX response:", response.text)
 
-        # Parse response (example assumes balance structure)
         data = response.json()
         qty = float(data.get("data", [{}])[0].get("balance", 0))
         price = 1.0  # Placeholder — replace with actual price lookup if needed
