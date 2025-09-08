@@ -12,19 +12,30 @@ def ping():
 
 @app.route('/sign', methods=['POST'])
 def sign():
-    try:
-        # Try to parse JSON first
-        data = request.get_json(force=True)
-    except:
-        # Fallback to form data if JSON fails
-        data = request.form.to_dict()
-
-    print("📦 Received from Sheets:", data)
+    data = request.form.to_dict()
+    print("📦 Received form data:", data)
 
     return jsonify({
         "status": "success",
         "message": "Hello from Render!",
         "echo": data
+    })
+
+@app.route('/debug', methods=['GET', 'POST'])
+def debug():
+    print("🔍 DEBUG ROUTE HIT")
+    print("🧾 Headers:", dict(request.headers))
+    print("📦 Form:", request.form.to_dict())
+    print("📄 Raw Data:", request.get_data(as_text=True))
+    print("🧠 JSON:", request.get_json(silent=True))
+
+    return jsonify({
+        "status": "debug",
+        "method": request.method,
+        "headers": dict(request.headers),
+        "form": request.form.to_dict(),
+        "raw": request.get_data(as_text=True),
+        "json": request.get_json(silent=True)
     })
 
 if __name__ == '__main__':
