@@ -38,6 +38,12 @@ def webhook():
         body = payload.get("body", {})
         meta = payload.get("meta", {})
 
+        # ✅ Use demo endpoint if needed
+        if "api.okx.com" in url:
+            print("⚠️ Using live endpoint — may fail on Render")
+        elif "www.okx.com" in url:
+            print("✅ Using demo endpoint")
+
         # Validate environment variables
         assert os.getenv("OKX_API_KEY"), "❌ Missing OKX_API_KEY"
         assert os.getenv("OKX_API_PASSPHRASE"), "❌ Missing OKX_API_PASSPHRASE"
@@ -83,7 +89,8 @@ def webhook():
 @app.route('/test-okx', methods=['GET'])
 def test_okx():
     try:
-        response = requests.get("https://api.okx.com/api/v5/public/instruments?instType=SPOT")
+        # ✅ Use demo endpoint for connectivity test
+        response = requests.get("https://www.okx.com/api/v5/public/instruments?instType=SPOT")
         return jsonify({
             "status": "success",
             "code": response.status_code,
