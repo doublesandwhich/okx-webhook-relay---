@@ -15,6 +15,13 @@ PASSPHRASE = os.getenv("OKX_PASSPHRASE")
 
 app = Flask(__name__)
 
+@app.route('/')
+def index():
+    return jsonify({
+        "status": "ok",
+        "message": "Webhook is running. Use POST /sign to get a signature."
+    })
+
 @app.route('/sign', methods=['POST'])
 def sign():
     data = request.get_json()
@@ -28,7 +35,10 @@ def sign():
 
     if not payload or not secret:
         print("⚠️ Missing payload or secret")
-        return jsonify({'error': 'Missing payload or secret'}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Missing payload or secret"
+        }), 400
 
     try:
         # Generate HMAC-SHA256 signature
@@ -43,14 +53,19 @@ def sign():
 
         # Return as JSON
         return jsonify({
-            'signature': encoded,
-            'api_key': API_KEY,
-            'passphrase': PASSPHRASE
+            "status": "success",
+            "message": "Payload signed successfully",
+            "signature": encoded,
+            "api_key": API_KEY,
+            "passphrase": PASSPHRASE
         })
 
     except Exception as e:
         print("❌ Error generating signature:", str(e))
-        return jsonify({'error': 'Internal server error'}), 500
+        return jsonify({
+            "status": "error",
+            "message": "Internal server error"
+        }), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
