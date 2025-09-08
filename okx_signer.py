@@ -1,42 +1,66 @@
 import os
+import time
+import hmac
+import base64
+import hashlib
+import requests
 from flask import Flask, request, jsonify
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
-@app.route('/ping', methods=['GET'])
-def ping():
-    return jsonify({
-        "status": "alive",
-        "message": "Flask is running and reachable"
-    })
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    try:
+        payload = request.get_json(force=True)
+        print("📦 Incoming payload:", payload)
 
-@app.route('/sign', methods=['POST'])
-def sign():
-    data = request.form.to_dict()
-    print("📦 Received form data:", data)
+        # Extract fields
+        url = payload.get("url")
+        method = payload.get("method", "POST")
+        body = payload.get("body", {})
+        meta = payload.get("meta", {})
 
-    return jsonify({
-        "status": "success",
-        "message": "Hello from Render!",
-        "echo": data
-    })
+        # Prepare OKX signature
+        timestamp = str(time.time())
+        body_str = "" if method == "GET" else json.dumps(body)
+        prehash = f"{timestamp}{method.upper()}{url.replace('https://api.okx.com', '')}{body_str}"
+        secret = os.getenv("OKX_API_SECRET")
+        signature = base64.b64encode(hmac.new(
+            secret.encode(), prehash.encode(), hashlib.sha256
+        ).digest()).decode()
 
-@app.route('/debug', methods=['GET', 'POST'])
-def debug():
-    print("🔍 DEBUG ROUTE HIT")
-    print("🧾 Headers:", dict(request.headers))
-    print("📦 Form:", request.form.to_dict())
-    print("📄 Raw Data:", request.get_data(as_text=True))
-    print("🧠 JSON:", request.get_json(silent=True))
+        headers = {
+            "OK-ACCESS-KEY": os.getenv("OKX_API_KEY"),
+            "OK-ACCESS-SIGN": signature,
+            "OK-ACCESS-TIMESTAMP": timestamp,
+            "OK-ACCESS-PASSPHRASE": os.getenv("OKX_API_PASSPHRASE"),
+            "Content-Type": "application/json"
+        }
 
-    return jsonify({
-        "status": "debug",
-        "method": request.method,
-        "headers": dict(request.headers),
-        "form": request.form.to_dict(),
-        "raw": request.get_data(as_text=True),
-        "json": request.get_json(silent=True)
-    })
+        # Send request to OKX
+        response = requests.post(url, headers=headers, json=body)
+        print("📨 OKX response:", response.text)
+
+        # Parse response (example assumes balance structure)
+        data = response.json()
+        qty = float(data.get("data", [{}])[0].get("balance", 0))
+        price = 1.0  # Placeholder — replace with actual price lookup if needed
+        value = qty * price
+
+        return jsonify({
+            "price": price,
+            "qty": qty,
+            "value": value,
+            "coin": meta.get("coin"),
+            "symbol": meta.get("symbol")
+        })
+
+    except Exception as e:
+        print("❌ Error:", str(e))
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
