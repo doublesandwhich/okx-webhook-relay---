@@ -12,7 +12,13 @@ def ping():
 
 @app.route('/sign', methods=['POST'])
 def sign():
-    data = request.get_json()
+    try:
+        # Try to parse JSON first
+        data = request.get_json(force=True)
+    except:
+        # Fallback to form data if JSON fails
+        data = request.form.to_dict()
+
     print("📦 Received from Sheets:", data)
 
     return jsonify({
