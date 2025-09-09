@@ -60,13 +60,18 @@ def webhook():
         coin = meta.get("coin", "").upper()
         balances = data.get("data", [])
 
-        print("🔍 Full balance data:")
+        # 🔍 Deep inspection of all fields per coin
+        print("🔍 Coins returned by OKX:")
         for item in balances:
-            print(json.dumps(item, indent=2))
+            ccy = item.get("ccy", "UNKNOWN")
+            print(f"\n🪙 {ccy}")
+            for key, val in item.items():
+                print(f"  {key}: {val}")
 
+        # 🧠 Try multiple fields to find actual balance
         qty = next(
             (
-                float(item.get("availBal", item.get("balance", 0)))
+                float(item.get("cashBal", item.get("availBal", item.get("balance", 0))))
                 for item in balances
                 if item.get("ccy", "").upper() == coin
             ),
