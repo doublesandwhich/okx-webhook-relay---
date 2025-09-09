@@ -36,8 +36,9 @@ def webhook():
         method = payload.get("method", "GET").upper()
         meta = payload.get("meta", {})
 
-        if "api.okx.com" in url:
-            return jsonify({"error": "❌ Live endpoint not allowed"}), 400
+        # ✅ Allow demo endpoint
+        if not url.startswith("https://www.okx.com/demo-api"):
+            return jsonify({"error": "❌ Only demo endpoint allowed"}), 400
 
         assert os.getenv("OKX_API_KEY"), "❌ Missing OKX_API_KEY"
         assert os.getenv("OKX_API_PASSPHRASE"), "❌ Missing OKX_API_PASSPHRASE"
@@ -45,7 +46,6 @@ def webhook():
         endpoint = url.replace("https://www.okx.com", "")
         body_str = "" if method == "GET" else json.dumps(payload.get("body", {}))
 
-        # ✅ Correct ISO 8601 UTC timestamp
         timestamp = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
         signature = sign_okx_request(timestamp, method, endpoint, body_str)
 
@@ -104,7 +104,7 @@ def webhook():
 @app.route('/test-okx', methods=['GET'])
 def test_okx():
     try:
-        response = requests.get("https://www.okx.com/api/v5/public/instruments?instType=SPOT")
+        response = requests.get("https://www.okx.com/demo-api/v5/public/instruments?instType=SPOT")
         return jsonify({
             "status": "success",
             "code": response.status_code,
