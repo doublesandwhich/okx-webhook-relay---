@@ -62,7 +62,9 @@ def webhook():
 
         data = response.json()
         coin = meta.get("coin", "").upper()
-        balances = data.get("data", [])
+
+        # ✅ Correct extraction from demo response structure
+        balances = data.get("data", [{}])[0].get("details", [])
 
         sys.stdout.write("🔍 Coins returned by OKX:\n")
         sys.stdout.flush()
