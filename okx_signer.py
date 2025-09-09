@@ -53,7 +53,7 @@ def webhook():
             "OK-ACCESS-TIMESTAMP": timestamp,
             "OK-ACCESS-PASSPHRASE": os.getenv("OKX_API_PASSPHRASE"),
             "Content-Type": "application/json",
-            "x-simulated-trading": "1"  # ✅ Enables demo mode
+            "x-simulated-trading": "1"
         }
 
         response = requests.request(method, url, headers=headers)
@@ -62,8 +62,6 @@ def webhook():
 
         data = response.json()
         coin = meta.get("coin", "").upper()
-
-        # ✅ Correct extraction from demo response structure
         balances = data.get("data", [{}])[0].get("details", [])
 
         sys.stdout.write("🔍 Coins returned by OKX:\n")
@@ -102,21 +100,6 @@ def webhook():
         sys.stdout.flush()
         return jsonify({"error": str(e)}), 500
 
-@app.route('/test-okx', methods=['GET'])
-def test_okx():
-    try:
-        response = requests.get("https://www.okx.com/api/v5/public/instruments?instType=SPOT")
-        return jsonify({
-            "status": "success",
-            "code": response.status_code,
-            "data": response.json()
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-        
 @app.route('/price-relay', methods=['POST'])
 def price_relay():
     try:
@@ -136,8 +119,50 @@ def price_relay():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-        
+
+@app.route('/test-okx', methods=['GET'])
+def test_okx():
+    try:
+        response = requests.get("https://www.okx.com/api/v5/public/instruments?instType=SPOT")
+        return jsonify({
+            "status": "success",
+            "code": response.status_code,
+            "data": response.json()
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route('/public-relay', methods=['POST'])
+def public_relay():
+    try:
+        payload = request.get_json(force=True)
+        url = payload.get("url")
+        method = payload.get("method", "GET").upper()
+
+        if not url or not url.startswith("https://www.okx.com/api/v5"):
+            return jsonify({"error": "❌ Invalid or missing URL"}), 400
+
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json"
+        }
+
+        if method == "GET":
+            response = requests.get(url, headers=headers)
+        elif method == "POST":
+            response = requests.post(url, headers=headers, json=payload.get("body", {}))
+        else:
+            return jsonify({"error": "Unsupported method"}), 405
+
+        return jsonify(response.json())
+
+    except Exception as e:
+        print(f"❌ Public relay error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-
