@@ -5,13 +5,15 @@ import base64
 import hashlib
 import json
 import requests
+import sys
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
 load_dotenv()
 app = Flask(__name__)
 
-print("✅ Secrets loaded successfully.", flush=True)
+sys.stdout.write("✅ Secrets loaded successfully.\n")
+sys.stdout.flush()
 
 def sign_okx_request(timestamp, method, endpoint, body):
     secret = os.getenv("OKX_API_SECRET")
@@ -26,7 +28,8 @@ def sign_okx_request(timestamp, method, endpoint, body):
 def webhook():
     try:
         payload = request.get_json(force=True)
-        print("📦 Incoming payload:", json.dumps(payload, indent=2), flush=True)
+        sys.stdout.write("📦 Incoming payload:\n" + json.dumps(payload, indent=2) + "\n")
+        sys.stdout.flush()
 
         url = payload.get("url")
         method = payload.get("method", "GET").upper()
@@ -53,18 +56,21 @@ def webhook():
         }
 
         response = requests.request(method, url, headers=headers)
-        print("📨 OKX response:", response.text, flush=True)
+        sys.stdout.write("📨 OKX response:\n" + response.text + "\n")
+        sys.stdout.flush()
 
         data = response.json()
         coin = meta.get("coin", "").upper()
         balances = data.get("data", [])
 
-        print("🔍 Coins returned by OKX:", flush=True)
+        sys.stdout.write("🔍 Coins returned by OKX:\n")
+        sys.stdout.flush()
         for item in balances:
             ccy = item.get("ccy", "UNKNOWN")
-            print(f"\n🪙 {ccy}", flush=True)
+            sys.stdout.write(f"\n🪙 {ccy}\n")
             for key, val in item.items():
-                print(f"  {key}: {val}", flush=True)
+                sys.stdout.write(f"  {key}: {val}\n")
+            sys.stdout.flush()
 
         qty = next(
             (
@@ -75,7 +81,9 @@ def webhook():
             0
         )
 
-        print(f"✅ Matched {coin}: Qty {qty}", flush=True)
+        sys.stdout.write(f"✅ Matched {coin}: Qty {qty}\n")
+        sys.stdout.flush()
+
         return jsonify({
             "qty": qty,
             "coin": coin,
@@ -83,10 +91,12 @@ def webhook():
         })
 
     except AssertionError as ae:
-        print("❌ Assertion Error:", str(ae), flush=True)
+        sys.stdout.write("❌ Assertion Error: " + str(ae) + "\n")
+        sys.stdout.flush()
         return jsonify({"error": str(ae)}), 500
     except Exception as e:
-        print("❌ General Error:", str(e), flush=True)
+        sys.stdout.write("❌ General Error: " + str(e) + "\n")
+        sys.stdout.flush()
         return jsonify({"error": str(e)}), 500
 
 @app.route('/test-okx', methods=['GET'])
