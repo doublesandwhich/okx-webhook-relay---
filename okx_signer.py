@@ -9,7 +9,6 @@ from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
 load_dotenv()
-
 app = Flask(__name__)
 
 # 🔐 Log secrets for debugging (safe in dev, remove in prod)
@@ -38,18 +37,14 @@ def webhook():
         body = payload.get("body", {})
         meta = payload.get("meta", {})
 
-        # ✅ Use demo endpoint if needed
+        # ✅ Enforce demo endpoint
         if "api.okx.com" in url:
-            print("⚠️ Using live endpoint — may fail on Render")
-        elif "www.okx.com" in url:
-            print("✅ Using demo endpoint")
+            return jsonify({"error": "❌ Live endpoint not allowed"}), 400
 
-        # Validate environment variables
         assert os.getenv("OKX_API_KEY"), "❌ Missing OKX_API_KEY"
         assert os.getenv("OKX_API_PASSPHRASE"), "❌ Missing OKX_API_PASSPHRASE"
 
-        # Extract endpoint from full URL
-        endpoint = url.replace("https://www.okx.com", "").replace("https://api.okx.com", "")
+        endpoint = url.replace("https://www.okx.com", "")
         body_str = json.dumps(body) if method.upper() != "GET" else ""
 
         timestamp = str(time.time())
@@ -67,15 +62,13 @@ def webhook():
         print("📨 OKX response:", response.text)
 
         data = response.json()
-        qty = float(data.get("data", [{}])[0].get("balance", 0))
-        price = 1.0  # Placeholder — replace with actual price lookup if needed
-        value = qty * price
+        coin = meta.get("coin")
+        balances = data.get("data", [])
+        qty = next((float(item["balance"]) for item in balances if item.get("ccy") == coin), 0)
 
         return jsonify({
-            "price": price,
             "qty": qty,
-            "value": value,
-            "coin": meta.get("coin"),
+            "coin": coin,
             "symbol": meta.get("symbol")
         })
 
@@ -89,7 +82,6 @@ def webhook():
 @app.route('/test-okx', methods=['GET'])
 def test_okx():
     try:
-        # ✅ Use demo endpoint for connectivity test
         response = requests.get("https://www.okx.com/api/v5/public/instruments?instType=SPOT")
         return jsonify({
             "status": "success",
