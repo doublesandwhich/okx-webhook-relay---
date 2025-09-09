@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 load_dotenv()
 app = Flask(__name__)
 
-# 🔐 Log secrets for debugging (safe in dev, remove in prod)
 print("🔐 Loaded secrets:")
 print("OKX_API_KEY:", os.getenv("OKX_API_KEY"))
 print("OKX_API_SECRET:", os.getenv("OKX_API_SECRET"))
@@ -37,7 +36,6 @@ def webhook():
         body = payload.get("body", {})
         meta = payload.get("meta", {})
 
-        # ✅ Enforce demo endpoint
         if "api.okx.com" in url:
             return jsonify({"error": "❌ Live endpoint not allowed"}), 400
 
@@ -64,8 +62,17 @@ def webhook():
         data = response.json()
         coin = meta.get("coin")
         balances = data.get("data", [])
-        qty = next((float(item["balance"]) for item in balances if item.get("ccy") == coin), 0)
 
+        print("🔍 Full balance data:")
+        for item in balances:
+            print(json.dumps(item, indent=2))
+
+        qty = next(
+            (float(item.get("availBal", item.get("balance", 0))) for item in balances if item.get("ccy") == coin),
+            0
+        )
+
+        print(f"✅ Matched {coin}: Qty {qty}")
         return jsonify({
             "qty": qty,
             "coin": coin,
