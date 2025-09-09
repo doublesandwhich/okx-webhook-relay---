@@ -29,8 +29,7 @@ def webhook():
         print("📦 Incoming payload:", json.dumps(payload, indent=2))
 
         url = payload.get("url")
-        method = payload.get("method", "POST")
-        body = payload.get("body", {})
+        method = payload.get("method", "GET").upper()
         meta = payload.get("meta", {})
 
         if "api.okx.com" in url:
@@ -40,7 +39,7 @@ def webhook():
         assert os.getenv("OKX_API_PASSPHRASE"), "❌ Missing OKX_API_PASSPHRASE"
 
         endpoint = url.replace("https://www.okx.com", "")
-        body_str = json.dumps(body) if method.upper() != "GET" else ""
+        body_str = "" if method == "GET" else json.dumps(payload.get("body", {}))
 
         timestamp = str(time.time())
         signature = sign_okx_request(timestamp, method, endpoint, body_str)
@@ -53,14 +52,13 @@ def webhook():
             "Content-Type": "application/json"
         }
 
-        response = requests.request(method, url, headers=headers, json=body)
+        response = requests.request(method, url, headers=headers)
         print("📨 OKX response:", response.text)
 
         data = response.json()
         coin = meta.get("coin", "").upper()
         balances = data.get("data", [])
 
-        # 🔍 Deep inspection of all fields per coin
         print("🔍 Coins returned by OKX:")
         for item in balances:
             ccy = item.get("ccy", "UNKNOWN")
@@ -68,7 +66,6 @@ def webhook():
             for key, val in item.items():
                 print(f"  {key}: {val}")
 
-        # 🧠 Try multiple fields to find actual balance
         qty = next(
             (
                 float(item.get("cashBal", item.get("availBal", item.get("balance", 0))))
