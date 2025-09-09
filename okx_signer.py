@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 app = Flask(__name__)
 
-print("✅ Secrets loaded successfully.")
+print("✅ Secrets loaded successfully.", flush=True)
 
 def sign_okx_request(timestamp, method, endpoint, body):
     secret = os.getenv("OKX_API_SECRET")
@@ -26,7 +26,7 @@ def sign_okx_request(timestamp, method, endpoint, body):
 def webhook():
     try:
         payload = request.get_json(force=True)
-        print("📦 Incoming payload:", json.dumps(payload, indent=2))
+        print("📦 Incoming payload:", json.dumps(payload, indent=2), flush=True)
 
         url = payload.get("url")
         method = payload.get("method", "GET").upper()
@@ -53,18 +53,18 @@ def webhook():
         }
 
         response = requests.request(method, url, headers=headers)
-        print("📨 OKX response:", response.text)
+        print("📨 OKX response:", response.text, flush=True)
 
         data = response.json()
         coin = meta.get("coin", "").upper()
         balances = data.get("data", [])
 
-        print("🔍 Coins returned by OKX:")
+        print("🔍 Coins returned by OKX:", flush=True)
         for item in balances:
             ccy = item.get("ccy", "UNKNOWN")
-            print(f"\n🪙 {ccy}")
+            print(f"\n🪙 {ccy}", flush=True)
             for key, val in item.items():
-                print(f"  {key}: {val}")
+                print(f"  {key}: {val}", flush=True)
 
         qty = next(
             (
@@ -75,7 +75,7 @@ def webhook():
             0
         )
 
-        print(f"✅ Matched {coin}: Qty {qty}")
+        print(f"✅ Matched {coin}: Qty {qty}", flush=True)
         return jsonify({
             "qty": qty,
             "coin": coin,
@@ -83,10 +83,10 @@ def webhook():
         })
 
     except AssertionError as ae:
-        print("❌ Assertion Error:", str(ae))
+        print("❌ Assertion Error:", str(ae), flush=True)
         return jsonify({"error": str(ae)}), 500
     except Exception as e:
-        print("❌ General Error:", str(e))
+        print("❌ General Error:", str(e), flush=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/test-okx', methods=['GET'])
