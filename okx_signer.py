@@ -8,6 +8,7 @@ import requests
 import sys
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+from datetime import datetime, timezone
 
 load_dotenv()
 app = Flask(__name__)
@@ -44,8 +45,8 @@ def webhook():
         endpoint = url.replace("https://www.okx.com", "")
         body_str = "" if method == "GET" else json.dumps(payload.get("body", {}))
 
-from datetime import datetime, timezone
-timestamp = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+        # ✅ Correct ISO 8601 UTC timestamp
+        timestamp = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
         signature = sign_okx_request(timestamp, method, endpoint, body_str)
 
         headers = {
@@ -118,4 +119,3 @@ def test_okx():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-
