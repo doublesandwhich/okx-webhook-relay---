@@ -1,5 +1,4 @@
 import os
-import time
 import hmac
 import base64
 import hashlib
@@ -36,9 +35,8 @@ def webhook():
         method = payload.get("method", "GET").upper()
         meta = payload.get("meta", {})
 
-        # ✅ Allow demo endpoint
-        if not url.startswith("https://www.okx.com/demo-api"):
-            return jsonify({"error": "❌ Only demo endpoint allowed"}), 400
+        if not url.startswith("https://www.okx.com/api/v5"):
+            return jsonify({"error": "❌ Invalid endpoint"}), 400
 
         assert os.getenv("OKX_API_KEY"), "❌ Missing OKX_API_KEY"
         assert os.getenv("OKX_API_PASSPHRASE"), "❌ Missing OKX_API_PASSPHRASE"
@@ -54,7 +52,8 @@ def webhook():
             "OK-ACCESS-SIGN": signature,
             "OK-ACCESS-TIMESTAMP": timestamp,
             "OK-ACCESS-PASSPHRASE": os.getenv("OKX_API_PASSPHRASE"),
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "x-simulated-trading": "1"  # ✅ Enables demo mode
         }
 
         response = requests.request(method, url, headers=headers)
@@ -104,7 +103,7 @@ def webhook():
 @app.route('/test-okx', methods=['GET'])
 def test_okx():
     try:
-        response = requests.get("https://www.okx.com/demo-api/v5/public/instruments?instType=SPOT")
+        response = requests.get("https://www.okx.com/api/v5/public/instruments?instType=SPOT")
         return jsonify({
             "status": "success",
             "code": response.status_code,
