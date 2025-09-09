@@ -116,7 +116,28 @@ def test_okx():
             "status": "error",
             "message": str(e)
         }), 500
+        
+@app.route('/price-relay', methods=['POST'])
+def price_relay():
+    try:
+        payload = request.get_json(force=True)
+        url = payload.get("url")
+        if not url.startswith("https://www.okx.com/api/v5/market/ticker"):
+            return jsonify({"error": "❌ Invalid price endpoint"}), 400
 
+        response = requests.get(url)
+        data = response.json()
+        price = float(data["data"][0]["last"])
+
+        return jsonify({
+            "coin": payload.get("meta", {}).get("coin", "").upper(),
+            "price": price
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
