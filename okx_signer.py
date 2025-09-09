@@ -56,7 +56,8 @@ def webhook():
             "x-simulated-trading": "1"
         }
 
-        response = requests.request(method, url, headers=headers)
+        # ✅ Updated line: include body in request
+        response = requests.request(method, url, headers=headers, json=payload.get("body", {}))
         sys.stdout.write("📨 OKX response:\n" + response.text + "\n")
         sys.stdout.flush()
 
