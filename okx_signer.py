@@ -11,10 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 app = Flask(__name__)
 
-print("🔐 Loaded secrets:")
-print("OKX_API_KEY:", os.getenv("OKX_API_KEY"))
-print("OKX_API_SECRET:", os.getenv("OKX_API_SECRET"))
-print("OKX_API_PASSPHRASE:", os.getenv("OKX_API_PASSPHRASE"))
+print("✅ Secrets loaded successfully.")
 
 def sign_okx_request(timestamp, method, endpoint, body):
     secret = os.getenv("OKX_API_SECRET")
@@ -60,7 +57,7 @@ def webhook():
         print("📨 OKX response:", response.text)
 
         data = response.json()
-        coin = meta.get("coin")
+        coin = meta.get("coin", "").upper()
         balances = data.get("data", [])
 
         print("🔍 Full balance data:")
@@ -68,7 +65,11 @@ def webhook():
             print(json.dumps(item, indent=2))
 
         qty = next(
-            (float(item.get("availBal", item.get("balance", 0))) for item in balances if item.get("ccy") == coin),
+            (
+                float(item.get("availBal", item.get("balance", 0)))
+                for item in balances
+                if item.get("ccy", "").upper() == coin
+            ),
             0
         )
 
